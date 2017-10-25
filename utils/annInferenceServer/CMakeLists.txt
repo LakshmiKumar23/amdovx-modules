@@ -18,50 +18,51 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+
 cmake_minimum_required (VERSION 2.8)
-project (vx_loomsl)
+project (annInferenceServer)
 
 set (CMAKE_CXX_STANDARD 11)
 
-# Get rid of warning
-if(POLICY CMP0054)
-	cmake_policy(SET CMP0054 OLD)
-endif()
-
 find_package(OpenCL REQUIRED)
+find_package(OpenCV REQUIRED)
 
-include_directories (${OpenCL_INCLUDE_DIRS} ${OpenCL_INCLUDE_DIRS}/Headers ../deps/amdovx-core/openvx/include )
+include_directories(../../deps/amdovx-core/openvx/include ../../vx_nn)
 
 list(APPEND SOURCES
-	kernels/alpha_blend.cpp
-	kernels/chroma_key.cpp
-	kernels/color_convert.cpp
-	kernels/exp_comp.cpp
-	kernels/exposure_compensation.cpp
-	kernels/kernels.cpp
-	kernels/lens_distortion_remap.cpp
-	kernels/merge.cpp
-	kernels/multiband_blender.cpp
-	kernels/noise_filter.cpp
-	kernels/pyramid_scale.cpp
-	kernels/seam_find.cpp
-	kernels/warp.cpp
-	kernels/warp_eqr_to_aze.cpp
-	kernels/initialize_setup_tables.cpp
-	live_stitch_api.cpp
-	profiler.cpp
-	)
+	common.cpp
+	arguments.cpp
+	netutil.cpp
+	configure.cpp
+	compiler.cpp
+	inference.cpp
+	server.cpp
+	main.cpp
+)
 
-include_directories (. kernels)
-add_library(${PROJECT_NAME} SHARED ${SOURCES})
-target_link_libraries(${PROJECT_NAME} ${OpenCL_LIBRARIES} openvx)
+add_executable(annInferenceServer ${SOURCES})
+target_link_libraries(annInferenceServer vx_nn openvx pthread)
+install (TARGETS annInferenceServer DESTINATION bin)
 
-install (TARGETS ${PROJECT_NAME} DESTINATION lib)
-install (FILES live_stitch_api.h DESTINATION include)
+if (OpenCL_FOUND)
+	include_directories(${OpenCL_INCLUDE_DIRS}/CL ${OpenCL_INCLUDE_DIRS}/Headers)
+	target_link_libraries(annInferenceServer ${OpenCL_LIBRARIES})
+endif(OpenCL_FOUND)
 
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
+if (OpenCV_FOUND)
+	target_compile_definitions(annInferenceServer PUBLIC ENABLE_OPENCV=1)
+	include_directories(${OpenCV_INCLUDE_DIRS})
+	target_link_libraries(annInferenceServer ${OpenCV_LIBRARIES})
+else(OpenCV_FOUND)
+	target_compile_definitions(annInferenceServer PUBLIC ENABLE_OPENCV=0)
+endif(OpenCV_FOUND)
+
+if( POLICY CMP0054 )
+  cmake_policy( SET CMP0054 OLD )
+endif()
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 else()
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.2 -std=c++11")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 endif()

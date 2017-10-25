@@ -106,7 +106,10 @@ static vx_status VX_CALLBACK processBatchNormalizationLayer(vx_node node, const 
 	ERROR_CHECK_STATUS(vxQueryNode(node, VX_NODE_LOCAL_DATA_PTR, &data, sizeof(data)));
 	miopenHandle_t miopenHandle = data->handle->miopen_handle;
 
-	//miopen batch norm inference.
+    ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_OPENCL, &data->input_mem, sizeof(data->input_mem)));
+    ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[6], VX_TENSOR_BUFFER_OPENCL, &data->output_mem, sizeof(data->output_mem)));
+
+    //miopen batch norm inference.
 	ERROR_CHECK_MIOPEN_STATUS(miopenBatchNormalizationForwardInference(miopenHandle, miopenBNSpatial, &data->alpha, &data->beta, data->input_desc, data->input_mem,
 		data->output_desc, data->output_mem, data->bnScaleBiasMeanVarDesc, data->bnScale, data->bnBias, data->bnMean, data->bnVariance, data->eps));
 
@@ -247,6 +250,7 @@ VX_API_ENTRY vx_node VX_API_CALL vxBatchNormalizationLayer(vx_graph graph, vx_te
 				(vx_reference)output
 			};
 			node = createNode(graph, VX_KERNEL_BATCH_NORMALISATION_LAYER_AMD, params, sizeof(params) / sizeof(params[0]));
+            vxReleaseScalar(&s_eps);
 		}
 	}
 	return node;
