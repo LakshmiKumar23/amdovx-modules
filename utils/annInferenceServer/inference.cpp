@@ -580,6 +580,8 @@ int InferenceEngine::run()
                     }
                     // release byteStream and keep the results in outputQ
                     delete[] byteStream;
+                    if(matOrig.data) matOrig.release();
+                    if(matScaled.data) matScaled.release();
                     outputQ.enqueue(std::tuple<int,int>(tag,label));
 #endif
 #elif INFERENCE_SCHEDULER_MODE == LIBRE_INFERENCE_SCHEDULER
@@ -770,9 +772,10 @@ void InferenceEngine::workDeviceInputCopy(int gpu)
                 }
             }
 #endif
-
             // release byteStream
             delete[] byteStream;
+            if(matOrig.data) matOrig.release();
+            if(matScaled.data) matScaled.release();
         }
 
         // unlock the OpenCL buffer to perform the writing
